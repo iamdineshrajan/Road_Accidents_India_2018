@@ -1,0 +1,1496 @@
+---
+title: "ROAD ACCIDENTS 2018"
+author: "GROUP 7"
+date: "6/8/2021"
+output: html_document
+---
+
+# ROAD ACCIDENTS 2018
+
+### loading the dataset
+```{r}
+df=read.csv("C:\\Users\\DELL\\Downloads\\accidents_18.csv",stringsAsFactors = TRUE,header = TRUE)
+```
+
+### loading the packages
+```{r}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+```
+__Data is taken from__
+
+
+From this dataset we are interested in looking only the Accidents & Population(2018) for all STATES/UT and it is further factorized into REGIONS.
+### data manipulation
+```{r}
+accidents1=select(df,c('Region','States_UT','Population_2018','Accidents')) %>%
+  mutate(per_lakh=(Accidents/Population_2018)*100000)
+```
+* we have used dplyr package to select and mutate the data 
+* And have arrived at a new variable called ACCIDENTS (PER LAKH POPULATION)
+* We further use ggplot2 and plotly to visualize the data.
+
+### data visualization
+```{r}
+acc_point=ggplot(accidents1,aes(x=Accidents,y=Population_2018)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Accidents vs Population(2018)") +
+  xlab("ACCIDENTS") +
+  ylab("POPULATION") +
+  theme_classic()
+plot(acc_point)
+```
+```{r}
+cor(accidents1$Population_2018,accidents1$Accidents,method = 'pearson')
+```
+__* the above scatter plot tells us that there is a linear relationship between Population and Accidents.__
+__* when the population increases the accidents to increases.__
+__* therefore we cannot come to a conclusion that STATE WITH HIGH ACCIDENTS IS CONSIDERED TO BE THE TOP STATE WITH HIGH ACCIDENT RATE.__
+__* therefore we use the per one lakh population to find the state with highest accidents rate.__
+
+#### as we all know there is always a linear relationship between accidents & population
+```{r}
+acc_point_1=ggplot(accidents1,aes(x=Accidents,y=per_lakh)) +
+  geom_point(color="red",size=6) +
+  geom_smooth() +
+  ggtitle("ACCIDENTS per one lakh population") +
+  xlab("ACCIDENTS") +
+  ylab("PER LAKH")+
+  theme_light()
+plot(acc_point_1)
+```
+```{r}
+cor(accidents1$Accidents,accidents1$per_lakh,method = 'pearson')
+```
+
+* From the above plot we come to know that per lakh population is not linear to the accidents.
+* Keeping this we can arrive at knowing the states/UT with high accidents rate.
+
+```{r}
+acc_hist=ggplot(accidents1,aes(x=Accidents)) +
+  geom_histogram(bins=20,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(Accidents),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept =median(Accidents),color='green',lwd=1)) +
+  ggtitle("Histogram for Accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(acc_hist)
+```
+```{r}
+summary(accidents1$Accidents)
+```
+* from the histogram and summary we come to know that the mean is lesser than the median, so the accidents variable is negatively skewed (LEFT SKEWED).
+* from the histogram we come to know most of the states faced from 0-2000 accidents most  frequently in 2018.
+* but we know that the accidents variable is not enough to arrive at a conclusion.
+```{r}
+acc_hist_pop=ggplot(accidents1,aes(x=per_lakh)) +
+  geom_histogram(bins=20,color='red')+
+  geom_vline(aes(xintercept=mean(per_lakh),color='green',lwd=2)) +
+  geom_vline(aes(xintercept=median(per_lakh),color='orange'))+
+  ggtitle("Histogram for accidents per lakh population")+
+  xlab("PER LAKH POPULATION") +
+  ylab("Count")+
+  theme_dark()
+plot(acc_hist_pop)
+```
+```{r}
+summary(accidents1$per_lakh)
+```
+* From the above histogram and summary function we finally get that the accidents per lakh population is almost normally distributed.
+
+### To know the outliers of our data we have used the boxplot
+```{r}
+reg_acc_box=ggplot(accidents1,aes(x=Region,y=Accidents,color=Region))+
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun = mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for accidents in every Region") +
+  xlab("REGION") +
+  ylab("ACCIDENTS")
+plot(reg_acc_box)
+```
+```{r}
+subset(accidents1,accidents1$Accidents %in% boxplot(accidents1$Accidents ~ accidents1$Region)$out)
+```
+* From the above boxplot we come to know that __ASSAM & Dadra & Nagar Haveli__ are the outliers but again looking at the linear relationship , We look into the accidents per lakh population.
+```{r}
+reg_perlakh_box=ggplot(accidents1,aes(x=Region,y=per_lakh,color=Region))+
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun = mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for accidents per lakh population  in every Region") +
+  xlab("REGION") +
+  ylab("per lakh pop.")
+plot(reg_perlakh_box)
+```
+```{r}
+subset(accidents1,accidents1$per_lakh %in% boxplot(accidents1$per_lakh ~ accidents1$Region)$out)
+```
+* From the above boxplot we conclude by saying that from the overall analysis of accidents in INDIA, we have the outliers as SIKKIM and Dadra & Nagar Haveli.
+* These two states have high kill rate per one lakh population. 
+* If we change the outliers to mean. The exact SUMMARY of accidents in INDIA is founded out.
+
+## TO LOOK INTO THE TOP 10 AND BOTTOM 10 ACCIDENTS in INDIA.
+```{r}
+top_10_states_acc=top_n(accidents1,10,per_lakh) %>%
+  arrange(desc(per_lakh))
+top10_acc_plt=ggplot(top_10_states_acc,aes(x=States_UT,y=per_lakh)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH ACCIDENTS RATE") +
+  xlab("STATES/UT") +
+  ylab("PER LAKH POPULATION") +
+  theme_dark()
+plot(top10_acc_plt)
+```
+* From the above barchart we get to know that these are States/UT with high accident rate.
+```{r}
+bottom_10_states_acc=filter(accidents1,per_lakh!=0) %>%
+  top_n(-10,per_lakh) %>%
+  arrange(per_lakh) %>%
+  ggplot(aes(x=States_UT,y=per_lakh)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW ACCIDENTS RATE") +
+  xlab("STATES/UT") +
+  ylab("PER LAKH POPULATION") +
+  theme_dark()
+plot(bottom_10_states_acc)
+```
+* From the above barchart we conclude by saying that __MEGHALAYA__ has the best accident rate among other states and __SIKKIM__ has the worst rate of accidents in INDIA.
+
+#### TRAFFIC VIOLATIONS 
+##### Now we use the traffic violations data to find the state wise rate for traffic violations
+```{r}
+violating_rules=select(df,c(2:15))
+violating_rules=select(violating_rules,c(-3:-4))
+
+violating_rules=mutate(violating_rules,overspeed_kill_per10_accidents=(Overspeed_kill/Overspeed_accidents) * 10) %>%
+  mutate(drunken_drive_kill_per10_accidents=(Drunkendrive_kill/Drunkendrive_accidents) * 10) %>%
+  mutate(wrongside_kill_per_10_accidents=(Wrongside_kill/Wrongside_accidents) * 10) %>%
+  mutate(redsignal_kill_per10_accidents=(Redsignal_kill/Redsignal_accidents) * 10) %>%
+  mutate(mobile_kill_per10_accidents=(Mobile_kill/Mobile_accidents) * 10)
+```
+
+```{r}
+violations=mutate(violating_rules,total_accidents = Overspeed_accidents + Drunkendrive_accidents +
+                    Wrongside_accidents +  Redsignal_accidents + Mobile_accidents) %>%
+  mutate(total_kills =  Overspeed_kill + Drunkendrive_kill +
+           Wrongside_kill +  Redsignal_kill + Mobile_kill) %>%
+  mutate(per10_accidents = overspeed_kill_per10_accidents + drunken_drive_kill_per10_accidents +
+           wrongside_kill_per_10_accidents +  redsignal_kill_per10_accidents + mobile_kill_per10_accidents)
+violations = select(violations,c('Region','total_accidents','total_kills','per10_accidents')) %>%
+  group_by(Region)
+violating_accidents= select(violations,c('Region','per10_accidents'))%>%
+  filter(per10_accidents > 0) %>%
+  group_by(Region) %>%
+  summarise(KILL_PER10_ACCIDENTS=(sum(per10_accidents)/n())/10)
+data.frame(violating_accidents)
+```
+* From the above dataframe, we come to know the __EASTERN REGION__ faces `r max(violating_accidents$KILL_PER10_ACCIDENTS)` kills per every 10 accidents. 
+* And interestingly, though __SOUTH INDIA__ faces a large number of accidents , it faces only `r min(violating_accidents$KILL_PER10_ACCIDENTS)` kills per every 10 accidents due to __TRAFFIC VIOLATIONS__
+
+```{r}
+violation_bar=plot_ly(violating_accidents,x= ~Region) %>%
+  add_trace(y= ~KILL_PER10_ACCIDENTS,name='ACCIDENTS (REGION_WISE)',type='bar')
+violation_bar
+```
+
+```{r}
+violation_pie=plot_ly(violating_accidents,labels= ~Region,values= ~KILL_PER10_ACCIDENTS,type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent')
+violation_pie
+```
+## INSIGHTS
+* From the above EDA & Statistical Inferences 
+ - We come to know that __CENTRAL REGION__ of INDIA faces the more number of accidents.
+ - And __EASTERN INDIA__ is facing more kills due to traffic violations. 
+ - this suggests us two things * PEOPLE NOT FOLLOWING THE TRAFFIC RULES
+                               * TRAFFIC RULES ARE NOT IMPOSED STRICTLY
+
+## NOW LETS LOOK DEEP INTO THESE TWO SUGESSTIONS
+### Loading the dataset for traffic violations by people
+```{r}
+violation=read.csv("C:\\Users\\DELL\\Downloads\\violation.csv",header = TRUE)
+```
+
+## For our further analysis we are making region as a factor variable.
+```{r}
+violation=within(violation,{
+  Region=factor(Region)})
+```
+
+### Analysis for overspeeding
+* We are selecting only the data for overspeeding and creating a column for knowing kills for every 10 overspeeding accidents.
+```{r}
+overspeed=select(violation,c(2:8)) %>%
+  mutate(kill_per_overspeed_acc=(over_kill/over_acc) * 10)
+```
+
+
+```{r}
+## histogram
+overspeed_hist=ggplot(overspeed,aes(x=over_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(over_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept =median(over_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for overspeed accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_minimal()
+plot(overspeed_hist)
+```
+```{r}
+summary(overspeed$over_acc)
+```
+* the data is right skewed.
+```{r}
+## outlier detection using boxplot
+overspeed_boxplot=ggplot(overspeed,aes(x=Region,y=over_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for overspeed accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(overspeed_boxplot)
+```
+```{r}
+subset(overspeed,overspeed$over_acc %in% boxplot(overspeed$over_acc ~ overspeed$Region)$out)
+```
+* Outliers are __ASSAM,RAJASTHAN,DELHI__ for overspeed accidents as they have accidents occured beyond the range of their respective Regions
+```{r}
+## plot
+overspeed_point=ggplot(overspeed,aes(x=over_acc,y=over_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(overspeed_point)
+```
+```{r}
+cor(overspeed$over_acc,overspeed$over_kill,method = 'pearson')
+```
+- there is a good correlation between overspeed accidents and kills.
+
+```{r}
+cor(overspeed$over_tot_inj,overspeed$over_gre_inj,method = 'pearson')
+```
+```{r}
+cor(overspeed$over_tot_inj,overspeed$over_min_inj,method = 'pearson')
+```
+- there is a strong correlation between total injuries and minor injuries 
+- this tells that most of the injuries occured where minor injuries.
+
+```{r}
+## barplot
+overspeed_injuries=plot_ly(overspeed,x= ~States_UTs) %>%
+  add_trace(y= ~over_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~over_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~over_tot_inj,name='Total Injury',type='bar')
+overspeed_injuries
+```
+```{r}
+overspeed_injuries_region=plot_ly(overspeed,x= ~Region) %>%
+  add_trace(y= ~over_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~over_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~over_tot_inj,name='Total Injury',type='bar')
+overspeed_injuries_region
+```
+```{r}
+top10_overspeed_kill=filter(overspeed,over_acc != over_kill ) %>%
+  top_n(10,kill_per_overspeed_acc) %>%
+  arrange(desc(kill_per_overspeed_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_overspeed_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO overspeed") +
+  xlab("STATES/UT") +
+  ylab("overspeed KILLS") +
+  theme_dark()
+plot(top10_overspeed_kill)
+```
+```{r}
+bottom10_overspeed_kill=filter(overspeed,over_acc != over_kill ) %>%
+  top_n(-10,kill_per_overspeed_acc) %>%
+  arrange(desc(kill_per_overspeed_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_overspeed_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO overspeed") +
+  xlab("STATES/UT") +
+  ylab("overspeed KILLS") +
+  theme_dark()
+plot(bottom10_overspeed_kill)
+```
+* Most of the kills happened due to overspeed is found in __MIZORAM__ and least is in __ANDAMAN & NICOBAR ISLANDS__ 
+* States like __PUNJAB & BIHAR__ is suggested to look into this problem with high attention to reduce the count of kills.
+
+```{r}
+overspeed_result = select(overspeed,c('Region','kill_per_overspeed_acc')) %>%
+  group_by(Region) %>%
+  summarise(kill_per10_overspeed_accidents=(sum(kill_per_overspeed_acc)/n())/10)
+data.frame(overspeed_result)
+```
+```{r} 
+overspeed_bar=plot_ly(overspeed_result,x= ~Region) %>%
+  add_trace(y= ~kill_per10_overspeed_accidents,name=' OVERSPEED ACCIDENTS (REGION_WISE)',type='bar')
+overspeed_bar
+```
+```{r}
+overspeed_pie=plot_ly(overspeed_result,labels= ~Region,values= ~kill_per10_overspeed_accidents,type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent')
+overspeed_pie
+```
+* From the above visualizations, we come to know that EAST INDIA is facing `r max(overspeed_result$kill_per10_overspeed_accidents)` kills per 10 accidents due to overspeeding.
+* And `r min(overspeed_result$kill_per10_overspeed_accidents)` kills per 10 accidents due to overspeeding is the least faced by SOUTH INDIA.
+* The share % of each region in 2018 (kills per 10 overspeeding accidents) is given in the pie chart above.
+### Suggestions 
+* The states in the East India such as __BIHAR, WEST BENGAL, JHARKHAND & ODISHA__ must look into this seriously has they as a region face more kills per every 10 accidents.
+
+### Analysis for drunken drive
+```{r}
+drunkendrive=select(violation,c(2:13))
+drunkendrive=select(drunkendrive,c(-3:-7)) %>% 
+  mutate(kill_per_drunkendrive_acc=(drunk_kill/drunk_acc) * 10)
+```
+
+```{r}
+## histogram
+
+drunkendrive_hist=ggplot(drunkendrive,aes(x=drunk_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(drunk_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept =median(drunk_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for drunkendrive accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(drunkendrive_hist)
+```
+```{r}
+summary(drunkendrive$drunk_acc)
+```
+- the summary and the histogram tells us the data of accidents due to drunken drive is positively skewed.
+- the histogram says that many states face accidents due to drunken drive is between 0 to 600 frequently.
+
+```{r}
+## outlier detection using boxplot
+drunkendrive_boxplot=ggplot(drunkendrive,aes(x=Region,y=drunk_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for drunkendrive accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(drunkendrive_boxplot)
+```
+```{r}
+subset(drunkendrive,drunkendrive$drunk_acc %in% boxplot(drunkendrive$drunk_acc ~ drunkendrive$Region)$out)
+```
+* we have found the outliers of the accidents of the drunken drive which is __ASSAM & DELHI__ due to their high kill rate due to  which is beyond the range for drunken drive kills in their  respective region. 
+* by replacing the count into the mean values the exact mean is found.
+
+```{r}
+## plot
+drunkendrive_point=ggplot(drunkendrive,aes(x=drunk_acc,y=drunk_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(drunkendrive_point)
+```
+```{r}
+cor(drunkendrive$drunk_acc,drunkendrive$drunk_kill,method = 'pearson')
+```
+* It is found that there is high correlation between accidents & kill due to drunkendrive.
+* every time accidents increases the kills also increases which alarming.
+
+```{r}
+## barplot
+drunkendrive_injuries=plot_ly(drunkendrive,x= ~States_UTs) %>%
+  add_trace(y= ~drunk_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~drunk_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~drunk_tot_inj,name='Total Injury',type='bar')
+drunkendrive_injuries
+```
+```{r}
+drunkendrive_injuries_region=plot_ly(drunkendrive,x= ~Region) %>%
+  add_trace(y= ~drunk_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~drunk_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~drunk_tot_inj,name='Total Injury',type='bar')
+drunkendrive_injuries_region
+```
+```{r}
+top10_drunkendrive_kill=filter(drunkendrive,drunk_acc != drunk_kill ) %>%
+  top_n(10,kill_per_drunkendrive_acc) %>%
+  arrange(desc(kill_per_drunkendrive_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_drunkendrive_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO drunkendrive") +
+  xlab("STATES/UT") +
+  ylab("Drunkendrive KILLS") +
+  theme_dark()
+plot(top10_drunkendrive_kill)
+```
+```{r}
+bottom10_drunkendrive_kill=filter(drunkendrive,drunk_acc != drunk_kill & drunk_acc > 0 & drunk_kill > 0 &
+                                    drunk_acc > drunk_kill) %>%
+  top_n(-10,kill_per_drunkendrive_acc) %>%
+  arrange(desc(kill_per_drunkendrive_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_drunkendrive_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO drunkendrive") +
+  xlab("STATES/UT") +
+  ylab("Drunkendrive KILLS") +
+  theme_dark()
+plot(bottom10_drunkendrive_kill)
+```
+* We conclude by saying that the states __UTTARAKHAND & MIZORAM__ faces more kills due to drunknen drive while __ANDHRA PRADESH & WEST BENGAL__ is good in controlling drunken drive accidents.
+* The central region faces more accidents and as we know that there is a linear relationship btw accidents & kills , the same region is facing more INJURIES too.
+
+```{r}
+drunkendrive_result = select(drunkendrive,c('Region','kill_per_drunkendrive_acc')) %>%
+  filter(kill_per_drunkendrive_acc >0) %>%
+  group_by(Region) %>%
+  summarise(kill_per10_drunkendrive_accidents=(sum(kill_per_drunkendrive_acc)/n())/10)
+data.frame(drunkendrive_result)
+```
+
+```{r}
+drunkendrive_bar=plot_ly(drunkendrive_result,x= ~Region) %>%
+  add_trace(y= ~kill_per10_drunkendrive_accidents,name=' DRUNKENDRIVE ACCIDENTS (REGION_WISE)',type='bar')
+drunkendrive_bar
+```
+
+```{r}
+drunkendrive_pie=plot_ly(drunkendrive_result,labels= ~Region,values= ~kill_per10_drunkendrive_accidents,type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent')
+drunkendrive_pie
+```
+### Analysis of wrongside driving accidents.
+```{r}
+wrongside=select(violation,c(2:18))
+wrongside=select(wrongside,c(-3:-12)) %>%
+  mutate(kill_per_wrongside_acc=(wrongside_kill/wrongside_acc) * 10)
+```
+```{r}
+## histogram
+
+wrongside_hist=ggplot(wrongside,aes(x=wrongside_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(wrongside_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept = median(wrongside_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for Wrongside accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(wrongside_hist)
+```
+```{r}
+summary(wrongside$wrongside_acc)
+```
+
+```{r}
+## outlier detection using boxplot
+wrongside_boxplot=ggplot(wrongside,aes(x=Region,y=wrongside_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for wrongside accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(wrongside_boxplot)
+```
+```{r}
+subset(wrongside,wrongside$wrongside_acc %in% boxplot(wrongside$wrongside_acc ~ wrongside$Region)$out)
+```
+- as we could there is one outlier in northeast region by confirming it in the boxplot which is __ASSAM__.
+```{r}
+## plot
+wrongside_point=ggplot(wrongside,aes(x=wrongside_acc,y=wrongside_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(wrongside_point)
+```
+```{r}
+cor(wrongside$wrongside_acc,wrongside$wrongside_kill,method = 'pearson')
+```
+- From the previous scatter plot we saw that the correlation `r cor(wrongside$wrongside_acc,wrongside$wrongside_kill,method='pearson')` for wrongside accidents & kills is decreasing.
+- From this we can assume that eventhough accidents increases, there is slightly lower increase in kills as compared to __OVERSPEED & DRUNKEN DRIVE__ accidents.
+```{r}
+## barplot
+wrongside_injuries=plot_ly(wrongside,x= ~States_UTs) %>%
+  add_trace(y= ~wrongside_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~wrongside_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~wrongside_tot_inj,name='Total Injury',type='bar')
+wrongside_injuries
+```
+```{r}
+wrongside_injuries_region=plot_ly(wrongside,x= ~Region) %>%
+  add_trace(y= ~wrongside_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~wrongside_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~wrongside_tot_inj,name='Total Injury',type='bar')
+wrongside_injuries_region
+```
+```{r}
+top10_wrongside_kill=filter(wrongside,wrongside_acc != wrongside_kill ) %>%
+  top_n(10,kill_per_wrongside_acc) %>%
+  arrange(desc(kill_per_wrongside_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_wrongside_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO Wrongside") +
+  xlab("STATES/UT") +
+  ylab("Wrongside KILLS") +
+  theme_dark()
+plot(top10_wrongside_kill)
+```
+```{r}
+bottom10_wrongside_kill=filter(wrongside,wrongside_acc != wrongside_kill & wrongside_acc > 0 & wrongside_kill > 0 & wrongside_acc > wrongside_kill) %>%
+  top_n(-10,kill_per_wrongside_acc) %>%
+  arrange(desc(kill_per_wrongside_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_wrongside_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO wrongside") +
+  xlab("STATES/UT") +
+  ylab("wrongside KILLS") +
+  theme_dark()
+plot(bottom10_wrongside_kill)
+```
+* States like __TAMIL NADU, UTTAR PRADESH & MADHYA PRADESH__ faces more number of accidents due to wrongside accidents. But as we saw in the scatter plot the accidents though are in large in number the kills are slightly increasing and as a result we see that it reflects in the injuries.
+* Accidents faced by the states  __TAMIL NADU & MADHYA PRADESH__ is high but the convincing part is most of them are found out to be the MINOR ACCIDENTS. 
+* Which is not in the case of __UTTAR PRADESH__ 
+* We also found that the most of the state have less number of kills due to __WRONGSIDE DRIVING__. In this the highest kills is faced by __DADRA & NAGAR HAVELI__ union territory and the lowest is in the state __GOA__.
+
+- we get to know that this accidents happen due to __ONE WAY__ roads. And the states with high kills due to wrongside accidents must try to reduce the ONE WAY roads.
+```{r}
+wrongside_result = select(wrongside,c('Region','kill_per_wrongside_acc')) %>%
+  filter(kill_per_wrongside_acc >0) %>%
+  group_by(Region) %>%
+  summarise(kill_per10_wrongside_accidents=(sum(kill_per_wrongside_acc)/n())/10)
+data.frame(wrongside_result)
+```
+
+```{r}
+wrongside_bar=plot_ly(wrongside_result,x= ~Region) %>%
+  add_trace(y= ~kill_per10_wrongside_accidents,name=' WRONGSIDE DRIVING ACCIDENTS (REGION_WISE)',type='bar')
+wrongside_bar
+```
+
+```{r}
+wrongside_pie=plot_ly(wrongside_result,labels= ~Region,values= ~kill_per10_wrongside_accidents,type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent')
+wrongside_pie
+```
+### Analysis od JUMPING RED SIGNAL ACCIDENTS.
+```{r}
+redsignal=select(violation,c(2:23))
+redsignal=select(redsignal,c(-3:-17)) %>%
+  mutate(kill_per_redsignal_acc=(redsig_kill/redsig_acc) * 10)
+```
+```{r}
+## histogram
+
+redsignal_hist=ggplot(redsignal,aes(x=redsig_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(redsig_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept = median(redsig_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for jumping redsignal accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(redsignal_hist)
+```
+```{r}
+summary(redsignal$redsig_acc)
+```
+* From summary and histogram we find that the data is a right skewed.
+* at an average of `r mean(redsignal$redsig_acc)` accidents occured all over india in 2018.
+```{r}
+## outlier detection using boxplot
+redsignal_boxplot=ggplot(redsignal,aes(x=Region,y=redsig_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for jumping redsignal accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(redsignal_boxplot)
+```
+```{r}
+subset(redsignal,redsignal$redsig_acc %in% boxplot(redsignal$redsig_acc ~ redsignal$Region)$out)
+```
+* We find the outliers to be __ASSAM, TAMIL NADU & DELHI__ in the NORTH EAST, SOUTH & UT Regions respectively. 
+* And these states have more accidents compared to others in their respective regions which is not good for the states.
+```{r}
+## plot
+redsignal_point=ggplot(redsignal,aes(x=redsig_acc,y=redsig_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(redsignal_point)
+```
+```{r}
+cor(redsignal$redsig_acc,redsignal$redsig_kill,method = 'pearson')
+```
+- There is a high correlation that accidents increases the kills also increases.
+```{r}
+## barplot
+redsignal_injuries=plot_ly(redsignal,x= ~States_UTs) %>%
+  add_trace(y= ~redsig_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~redsig_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~redsig_tot_inj,name='Total Injury',type='bar')
+redsignal_injuries
+```
+```{r}
+redsignal_injuries_region=plot_ly(redsignal,x= ~Region) %>%
+  add_trace(y= ~redsig_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~redsig_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~redsig_tot_inj,name='Total Injury',type='bar')
+redsignal_injuries_region
+```
+```{r}
+top10_redsignal_kill=filter(redsignal,redsig_acc != redsig_kill ) %>%
+  top_n(10,kill_per_redsignal_acc) %>%
+  arrange(desc(kill_per_redsignal_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_redsignal_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO Jumping Redsignal") +
+  xlab("STATES/UT") +
+  ylab("Redsignal KILLS") +
+  theme_dark()
+plot(top10_redsignal_kill)
+```
+```{r}
+bottom10_redsignal_kill=filter(redsignal,redsig_acc != redsig_kill & redsig_acc > 0 & redsig_kill > 0 &
+                                 redsig_acc > redsig_kill) %>%
+  top_n(-10,kill_per_redsignal_acc) %>%
+  arrange(desc(kill_per_redsignal_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_redsignal_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO Redsignal") +
+  xlab("STATES/UT") +
+  ylab("Redsignal KILLS") +
+  theme_dark()
+plot(bottom10_redsignal_kill)
+```
+* In __TAMIL NADU__ there as been more number of accidents due to jumping redsignal but most of them were to be minor
+* Due to the high number of accidents in __TAMIL NADU__ , south india seems to be the region with high percent of cases. 
+* But it is the __CENTRAL INDIA__ which causes a lot of accidents by jumping redsignals.
+
+- the states like __MEGHALAYA,PUNJAB & JHARKHAND__ peaks with high kill rate for every 10 accidents due to jumping redsignal. while, __ANDHRA PRADESH & KARNATAKA__ are the two states with low kill rate for every 10 accidents due to jumping redsignal.
+
+
+```{r}
+redsignal_result = select(redsignal,c('Region','kill_per_redsignal_acc')) %>%
+  filter(kill_per_redsignal_acc >0) %>%
+  group_by(Region) %>%
+  summarise(kill_per10_redsignal_accidents=(sum(kill_per_redsignal_acc)/n())/10)
+data.frame(redsignal_result)
+```
+
+```{r}
+redsignal_bar=plot_ly(redsignal_result,x= ~Region) %>%
+  add_trace(y= ~kill_per10_redsignal_accidents,name=' JUMPING REDSIGNAL ACCIDENTS (REGION_WISE)',type='bar')
+redsignal_bar
+```
+
+```{r}
+redsignal_pie=plot_ly(redsignal_result,labels= ~Region,values= ~kill_per10_redsignal_accidents,type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent')
+redsignal_pie
+```
+### Analysis for accidents happened by using MOBILE while driving
+```{r}
+mobile=select(violation,c(2:28))
+mobile=select(mobile,c(-3:-22)) %>%
+  mutate(kill_per_mobile_acc=(mobile_kill/mobile_acc) * 10)
+```
+```{r}
+## histogram
+
+mobile_hist=ggplot(mobile,aes(x=mobile_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(mobile_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept = median(mobile_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for jumping mobile accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(mobile_hist)
+```
+
+```{r}
+summary(mobile$mobile_acc)
+```
+* From the histogram and summary() we get to this is a right skewed data.
+* And we come to know that many states have accidents less than 800 accidents.
+```{r}
+## outlier detection using boxplot
+mobile_boxplot=ggplot(mobile,aes(x=Region,y=mobile_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for jumping mobile accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(mobile_boxplot)
+```
+```{r}
+subset(mobile,mobile$mobile_acc %in% boxplot(mobile$mobile_acc ~ mobile$Region)$out)
+```
+* The outlier that we saw from Histogram and Boxplot were the states __ASSAM,TAMIL NADU & DELHI__ of their respective region.
+
+```{r}
+## plot
+mobile_point=ggplot(mobile,aes(x=mobile_acc,y=mobile_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(mobile_point)
+```
+
+```{r}
+cor(mobile$mobile_acc,mobile$mobile_kill,method='pearson')
+```
+* The correlation is high and it says accidents increases then there is very high percentage of kill increasing too.
+```{r}
+## barplot
+mobile_injuries=plot_ly(mobile,x= ~States_UTs) %>%
+  add_trace(y= ~mobile_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~mobile_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~mobile_tot_inj,name='Total Injury',type='bar')
+mobile_injuries
+```
+```{r}
+mobile_injuries_region=plot_ly(mobile,x= ~Region) %>%
+  add_trace(y= ~mobile_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~mobile_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~mobile_tot_inj,name='Total Injury',type='bar')
+mobile_injuries_region
+```
+```{r}
+top10_mobile_kill=filter(mobile,mobile_acc != mobile_kill ) %>%
+  top_n(10,kill_per_mobile_acc) %>%
+  arrange(desc(kill_per_mobile_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_mobile_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO Jumping mobile") +
+  xlab("STATES/UT") +
+  ylab("Redsignal KILLS") +
+  theme_dark()
+plot(top10_mobile_kill)
+```
+
+```{r}
+bottom10_mobile_kill=filter(mobile,mobile_acc != mobile_kill & mobile_acc > 0 & mobile_kill > 0 &
+                                 mobile_acc > mobile_kill) %>%
+  top_n(-10,kill_per_mobile_acc) %>%
+  arrange(desc(kill_per_mobile_acc)) %>%
+  ggplot(aes(x=States_UTs,y=kill_per_mobile_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO mobile") +
+  xlab("STATES/UT") +
+  ylab("Redsignal KILLS") +
+  theme_dark()
+plot(bottom10_mobile_kill)
+```
+* Most of the injuries has been occured in __UTTAR PRADESH__ due to using mobiles while driving. And most of them are grevious injuries.
+* But the state of __WEST BENGAL__ tops per highest kill rate per 10 accidents that occur due to using mobile while driving.
+* While __MANIPUR & ANDHRA PRADESH__ has been good with low kill rate.
+```{r}
+mobile_result = select(mobile,c('Region','kill_per_mobile_acc')) %>%
+  filter(kill_per_mobile_acc >0) %>%
+  group_by(Region) %>%
+  summarise(kill_per10_mobile_accidents=(sum(kill_per_mobile_acc)/n())/10)
+data.frame(mobile_result)
+```
+
+```{r}
+mobile_bar=plot_ly(mobile_result,x= ~Region) %>%
+  add_trace(y= ~kill_per10_mobile_accidents,name=' USING MOBILE ACCIDENTS (REGION_WISE)',type='bar')
+mobile_bar
+```
+
+```{r}
+mobile_pie=plot_ly(mobile_result,labels= ~Region,values= ~kill_per10_mobile_accidents,type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent')
+mobile_pie
+```
+
+
+```{r}
+### descriptive statistics
+
+ACCIDENTS= data.frame(
+  traffic_violations=c('Overspeeding','Drunken Drive','Wrongside Driving','Jumping Redsignal','Using Mobile'),
+  total_accidents=c(sum(violation$over_acc),sum(violation$drunk_acc),sum(violation$wrongside_acc),sum(violation$redsig_acc),
+                    sum(violation$mobile_acc)),
+  total_kills=c(sum(violation$over_kill),sum(violation$drunk_kill),sum(violation$wrongside_kill),
+                sum(violation$redsig_kill),sum(violation$mobile_kill)),
+  total_injuries=c(sum(violation$over_tot_inj),sum(violation$drunk_tot_inj),sum(violation$wrongside_tot_inj),
+                   sum(violation$redsig_tot_inj),sum(violation$mobile_tot_inj))
+  
+)
+ACCIDENTS
+```
+```{r}
+ACCIDENTS=within(ACCIDENTS,{
+  traffic_violations=factor(traffic_violations)
+  })
+str(ACCIDENTS)
+summary(ACCIDENTS)
+cor(ACCIDENTS$total_accidents,ACCIDENTS$total_kills,method= 'pearson')
+```
+```{r}
+acc_bar=plot_ly(ACCIDENTS,x= ~traffic_violations) %>%
+  add_trace(y= ~total_accidents,name='ACCIDENTS',type='bar') %>%
+  add_trace(y =~total_kills,name='DEATHS',type='bar') %>%
+  add_trace(y =~total_injuries,name='INJURY',type='bar')
+acc_bar
+```
+```{r}
+acc_pie=plot_ly(ACCIDENTS,labels= ~traffic_violations,values= ~total_accidents,type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent')
+
+acc_pie
+```
+
+```{r}
+acc_kill_pie=plot_ly(ACCIDENTS,labels= ~traffic_violations,values= ~total_kills,type='pie',
+                 textposition = 'inside',
+                 textinfo = 'label+percent')
+acc_kill_pie
+```
+
+```{r}
+acc_inj_pie=plot_ly(ACCIDENTS,labels= ~traffic_violations,values= ~total_injuries,type='pie',
+                    textposition ='inside',
+                    textinfo = 'label+percent')
+acc_inj_pie
+```
+
+```{r}
+traffic=read.csv("C:\\Users\\DELL\\Downloads\\traffic.csv",header = TRUE)
+```
+```{r}
+traffic=within(traffic,{
+  Region=factor(Region)})
+```
+```{r}
+#### Traffic signal controlled
+
+trafficSignal=select(traffic,c(2:8)) %>%
+  mutate(kill_per_trafficsignal_acc=(tra_sig_kill/tra_sig_acc) * 10)
+```
+```{r}
+## histogram
+trafficSignal_hist=ggplot(trafficSignal,aes(x=tra_sig_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(tra_sig_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept =median(tra_sig_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for traffic signal controlled  accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(trafficSignal_hist)
+```
+```{r}
+## outlier detection using boxplot
+trafficSignal_boxplot=ggplot(trafficSignal,aes(x=Region,y=tra_sig_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for traffic signal controlled accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(trafficSignal_boxplot)
+```
+```{r}
+subset(trafficSignal,trafficSignal$tra_sig_acc %in% boxplot(trafficSignal$tra_sig_acc ~ trafficSignal$Region)$out)
+```
+```{r}
+## plot
+trafficSignal_point=ggplot(trafficSignal,aes(x=tra_sig_acc,y=tra_sig_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for traffic controlled accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(trafficSignal_point)
+```
+```{r}
+## barplot
+trafficSignal_injuries=plot_ly(trafficSignal,x= ~States_Uts) %>%
+  add_trace(y= ~tra_sig_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~tra_sig_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~tra_sig_tot_inj,name='Total Injury',type='bar')
+trafficSignal_injuries
+```
+```{r}
+trafficSignal_injuries_region=plot_ly(trafficSignal,x= ~Region) %>%
+  add_trace(y= ~tra_sig_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~tra_sig_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~tra_sig_tot_inj,name='Total Injury',type='bar')
+trafficSignal_injuries_region
+```
+```{r}
+top10_trafficSignal_kill=filter(trafficSignal,tra_sig_acc != tra_sig_kill ) %>%
+  top_n(10,kill_per_trafficsignal_acc) %>%
+  arrange(desc(kill_per_trafficsignal_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_trafficsignal_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS IN Traffic signal controlled places") +
+  xlab("STATES/UT") +
+  ylab("traffic signal control KILLS") +
+  theme_dark()
+plot(top10_trafficSignal_kill)
+```
+```{r}
+bottom10_trafficSignal_kill=filter(trafficSignal,tra_sig_acc != tra_sig_kill & 
+                                     tra_sig_acc > 0 & tra_sig_kill > 0 &
+                                     tra_sig_acc > tra_sig_kill ) %>%
+  top_n(-10,kill_per_trafficsignal_acc) %>%
+  arrange(desc(kill_per_trafficsignal_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_trafficsignal_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS in traffic signal controlled places") +
+  xlab("STATES/UT") +
+  ylab("traffic signal control KILLS") +
+  theme_dark()
+plot(bottom10_trafficSignal_kill)
+```
+###########################################################################
+```{r}
+policeControlled=select(traffic,c(2:13))
+policeControlled=select(policeControlled,c(-3:-7)) %>% 
+  mutate(kill_per_policeControlled_acc=(pol_kill/pol_acc) * 10)
+```
+```{r}
+## histogram
+
+policeControlled_hist=ggplot(policeControlled,aes(x=pol_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(pol_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept =median(pol_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for policeControlled accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(policeControlled_hist)
+```
+```{r}
+## oUtlier detection using boxplot
+policeControlled_boxplot=ggplot(policeControlled,aes(x=Region,y=pol_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for policeControlled accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(policeControlled_boxplot)
+```
+```{r}
+subset(policeControlled,policeControlled$pol_acc %in% boxplot(policeControlled$pol_acc ~ policeControlled$Region)$out)
+```
+```{r}
+## plot
+policeControlled_point=ggplot(policeControlled,aes(x=pol_acc,y=pol_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(overspeed_point)
+```
+```{r}
+## barplot
+policeControlled_injuries=plot_ly(policeControlled,x= ~States_Uts) %>%
+  add_trace(y= ~pol_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~pol_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~pol_tot_inj,name='Total Injury',type='bar')
+policeControlled_injuries
+```
+```{r}
+policeControlled_injuries_region=plot_ly(policeControlled,x= ~Region) %>%
+  add_trace(y= ~pol_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~pol_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~pol_tot_inj,name='Total Injury',type='bar')
+policeControlled_injuries_region
+```
+```{r}
+top10_policeControlled_kill=filter(policeControlled,pol_acc != pol_kill ) %>%
+  top_n(10,kill_per_policeControlled_acc) %>%
+  arrange(desc(kill_per_policeControlled_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_policeControlled_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO policeControlled") +
+  xlab("STATES/Ut") +
+  ylab("policeControlled KILLS") +
+  theme_dark()
+plot(top10_overspeed_kill)
+```
+```{r}
+bottom10_policeControlled_kill=filter(policeControlled,pol_acc != pol_kill & pol_acc > 0 & pol_kill > 0 &
+                                    pol_acc > pol_kill) %>%
+  top_n(-10,kill_per_policeControlled_acc) %>%
+  arrange(desc(kill_per_policeControlled_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_policeControlled_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO policeControlled") +
+  xlab("STATES/Ut") +
+  ylab("policeControlled KILLS") +
+  theme_dark()
+plot(bottom10_policeControlled_kill)
+```
+
+
+######################################################################################################
+```{r}
+stopsignal=select(traffic,c(2:18))
+stopsignal=select(stopsignal,c(-3:-12)) %>%
+  mutate(kill_per_stopsignal_acc=(stop_kill/stop_acc) * 10)
+```
+```{r}
+## histogram
+
+stopsignal_hist=ggplot(stopsignal,aes(x=stop_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(stop_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept = median(stop_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for stopsignal accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(stopsignal_hist)
+```
+```{r}
+## outlier detection using boxplot
+stopsignal_boxplot=ggplot(stopsignal,aes(x=Region,y=stop_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for stopsignal accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(stopsignal_boxplot)
+```
+```{r}
+subset(stopsignal,stopsignal$stop_acc %in% boxplot(stopsignal$stop_acc ~ stopsignal$Region)$out)
+```
+```{r}
+## plot
+stopsignal_point=ggplot(stopsignal,aes(x=stop_acc,y=stop_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(stopsignal_point)
+```
+```{r}
+## barplot
+stopsignal_injuries=plot_ly(stopsignal,x= ~States_Uts) %>%
+  add_trace(y= ~stop_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~stop_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~stop_tot_inj,name='Total Injury',type='bar')
+stopsignal_injuries
+```
+```{r}
+stopsignal_injuries_region=plot_ly(stopsignal,x= ~Region) %>%
+  add_trace(y= ~stop_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~stop_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~stop_tot_inj,name='Total Injury',type='bar')
+stopsignal_injuries_region
+```
+```{r}
+top10_stopsignal_kill=filter(stopsignal,stop_acc != stop_kill ) %>%
+  top_n(10,kill_per_stopsignal_acc) %>%
+  arrange(desc(kill_per_stopsignal_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_stopsignal_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO stopsignal") +
+  xlab("STATES/UT") +
+  ylab("stopsignal KILLS") +
+  theme_dark()
+plot(top10_stopsignal_kill)
+```
+```{r}
+bottom10_stopsignal_kill=filter(stopsignal,stop_acc != stop_kill & stop_acc > 0 & stop_kill > 0 &
+                                 stop_acc > stop_kill) %>%
+  top_n(-10,kill_per_stopsignal_acc) %>%
+  arrange(desc(kill_per_stopsignal_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_stopsignal_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO stopsignal") +
+  xlab("STATES/UT") +
+  ylab("stopsignal KILLS") +
+  theme_dark()
+plot(bottom10_stopsignal_kill)
+```
+#####################################################################################################
+```{r}
+blinker=select(traffic,c(2:23))
+blinker=select(blinker,c(-3:-17)) %>%
+  mutate(kill_per_blinker_acc=(blinker_kill/blinker_acc) * 10)
+```
+```{r}
+## histogram
+
+blinker_hist=ggplot(blinker,aes(x=blinker_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(blinker_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept = median(blinker_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for  blinker accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(blinker_hist)
+```
+```{r}
+## outlier detection using boxplot
+blinker_boxplot=ggplot(blinker,aes(x=Region,y=blinker_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for  blinker accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(blinker_boxplot)
+```
+```{r}
+subset(blinker,blinker$blinker_acc %in% boxplot(blinker$blinker_acc ~ blinker$Region)$out)
+```
+```{r}
+## plot
+blinker_point=ggplot(blinker,aes(x=blinker_acc,y=blinker_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(blinker_point)
+```
+```{r}
+## barplot
+blinker_injuries=plot_ly(blinker,x= ~States_Uts) %>%
+  add_trace(y= ~blinker_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~blinker_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~blinker_tot_inj,name='Total Injury',type='bar')
+blinker_injuries
+```
+```{r}
+blinker_injuries_region=plot_ly(blinker,x= ~Region) %>%
+  add_trace(y= ~blinker_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~blinker_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~blinker_tot_inj,name='Total Injury',type='bar')
+blinker_injuries_region
+```
+```{r}
+top10_blinker_kill=filter(blinker,blinker_acc != blinker_kill ) %>%
+  top_n(10,kill_per_blinker_acc) %>%
+  arrange(desc(kill_per_blinker_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_blinker_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO Jumping blinker") +
+  xlab("STATES/UT") +
+  ylab("blinker KILLS") +
+  theme_dark()
+plot(top10_blinker_kill)
+```
+```{r}
+bottom10_blinker_kill=filter(blinker,blinker_acc != blinker_kill & blinker_acc > 0 & blinker_kill > 0 &
+                                 blinker_acc > blinker_kill) %>%
+  top_n(-10,kill_per_blinker_acc) %>%
+  arrange(desc(kill_per_blinker_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_blinker_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO blinker") +
+  xlab("STATES/UT") +
+  ylab("blinker KILLS") +
+  theme_dark()
+plot(bottom10_blinker_kill)
+```
+
+#################################################################################################
+```{r}
+uncontrolled=select(traffic,c(2:28))
+uncontrolled=select(uncontrolled,c(-3:-22)) %>%
+  mutate(kill_per_uncontrolled_acc=(uncont_kill/uncont_acc) * 10)
+```
+```{r}
+## histogram
+
+uncontrolled_hist=ggplot(uncontrolled,aes(x=uncont_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(uncont_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept = median(uncont_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for jumping uncontrolled accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(uncontrolled_hist)
+```
+```{r}
+## outlier detection using boxplot
+uncontrolled_boxplot=ggplot(uncontrolled,aes(x=Region,y=uncont_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for jumping uncontrolled accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(uncontrolled_boxplot)
+```
+```{r}
+subset(uncontrolled,uncontrolled$uncont_acc %in% boxplot(uncontrolled$uncont_acc ~ uncontrolled$Region)$out)
+```
+```{r}
+## plot
+uncontrolled_point=ggplot(uncontrolled,aes(x=uncont_acc,y=uncont_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(uncontrolled_point)
+```
+```{r}
+## barplot
+uncontrolled_injuries=plot_ly(uncontrolled,x= ~States_Uts) %>%
+  add_trace(y= ~uncont_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~uncont_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~uncont_tot_inj,name='Total Injury',type='bar')
+uncontrolled_injuries
+```
+```{r}
+uncontrolled_injuries_region=plot_ly(uncontrolled,x= ~Region) %>%
+  add_trace(y= ~uncont_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~uncont_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~uncont_tot_inj,name='Total Injury',type='bar')
+uncontrolled_injuries_region
+```
+```{r}
+top10_uncontrolled_kill=filter(uncontrolled,uncont_acc != uncont_kill ) %>%
+  top_n(10,kill_per_uncontrolled_acc) %>%
+  arrange(desc(kill_per_uncontrolled_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_uncontrolled_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO Jumping uncontrolled") +
+  xlab("STATES/UT") +
+  ylab("Redsignal KILLS") +
+  theme_dark()
+plot(top10_uncontrolled_kill)
+```
+```{r}
+bottom10_uncontrolled_kill=filter(uncontrolled,uncont_acc != uncont_kill & uncont_acc > 0 & uncont_kill > 0 & uncont_acc > uncont_kill) %>%
+  top_n(-10,kill_per_uncontrolled_acc) %>%
+  arrange(desc(kill_per_uncontrolled_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_uncontrolled_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO uncontrolled") +
+  xlab("STATES/UT") +
+  ylab("Redsignal KILLS") +
+  theme_dark()
+plot(bottom10_uncontrolled_kill)
+```
+######################################################################################################
+```{r}
+other=select(traffic,c(2:33))
+other=select(other,c(-3:-27)) %>%
+  mutate(kill_per_other_acc=(other_kill/other_acc) * 10)
+```
+```{r}
+## histogram
+
+other_hist=ggplot(other,aes(x=other_acc)) +
+  geom_histogram(bins=30,color="red",fill="orange",linetype="dashed") +
+  geom_vline(aes(xintercept = mean(other_acc),color='blue',lwd=1)) +
+  geom_vline(aes(xintercept = median(other_acc),color='green',lwd=1)) +
+  ggtitle("Histogram for jumping other accidents") +
+  xlab("Accidents")+
+  ylab("Count")+
+  theme_dark()
+plot(other_hist)
+```
+```{r}
+## outlier detection using boxplot
+other_boxplot=ggplot(other,aes(x=Region,y=other_acc,color=Region)) +
+  geom_boxplot(outlier.color = 'red',outlier.shape = 2,outlier.size = 3) +
+  stat_summary(fun =mean,
+               geom = "point",
+               size = 3,
+               color = "steelblue") +
+  theme_classic()+
+  ggtitle("Boxplot for jumping other accidents  in every Region") +
+  xlab("REGION") +
+  ylab("Count")
+plot(other_boxplot)
+```
+```{r}
+subset(other,other$other_acc %in% boxplot(other$other_acc ~ other$Region)$out)
+```
+```{r}
+## plot
+other_point=ggplot(other,aes(x=other_acc,y=other_kill)) +
+  geom_point(color='red',size=6) +
+  geom_smooth(method = lm) +
+  ggtitle("Scatter Plot for accidents") +
+  xlab("ACCIDENTS") +
+  ylab("KILL") +
+  theme_classic()
+plot(other_point)
+```
+```{r}
+## barplot
+other_injuries=plot_ly(other,x= ~States_Uts) %>%
+  add_trace(y= ~other_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~other_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~other_tot_inj,name='Total Injury',type='bar')
+other_injuries
+```
+```{r}
+other_injuries_region=plot_ly(other,x= ~Region) %>%
+  add_trace(y= ~other_gre_inj,name='Greviously',type='bar') %>%
+  add_trace(y =~other_min_inj,name='Minor',type='bar') %>%
+  add_trace(y =~other_tot_inj,name='Total Injury',type='bar')
+other_injuries_region
+```
+```{r}
+top10_other_kill=filter(other,other_acc != other_kill ) %>%
+  top_n(10,kill_per_other_acc) %>%
+  arrange(desc(kill_per_other_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_other_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH HIGH KILLS DUE TO Jumping other") +
+  xlab("STATES/UT") +
+  ylab("Redsignal KILLS") +
+  theme_dark()
+plot(top10_other_kill)
+```
+```{r}
+bottom10_other_kill=filter(other,other_acc != other_kill & other_acc > 0 & other_kill > 0 &
+                                    other_acc > other_kill) %>%
+  top_n(-10,kill_per_other_acc) %>%
+  arrange(desc(kill_per_other_acc)) %>%
+  ggplot(aes(x=States_Uts,y=kill_per_other_acc)) +
+  geom_bar(stat="identity",color="red",fill="orange",linetype="dashed")+
+  ggtitle("TOP 10 STATES WITH LOW KILLS DUE TO other") +
+  xlab("STATES/UT") +
+  ylab("Redsignal KILLS") +
+  theme_dark()
+plot(bottom10_other_kill)
+```
+#########################################################################################
+```{r}
+TRAFFIC_CONTROLS= data.frame(
+  traffic_controls=c('TrafficSignal','Police Controlled','Stop Signal','Flash/Blinker','Uncontrolled Places','Others'),
+  total_accidents=c(sum(traffic$tra_sig_acc),sum(traffic$pol_acc),sum(traffic$stop_acc),sum(traffic$blinker_acc),
+                    sum(traffic$uncont_acc),sum(traffic$other_acc)),
+  total_kills=c(sum(traffic$tra_sig_kill),sum(traffic$pol_kill),sum(traffic$stop_kill),sum(traffic$blinker_kill),
+                sum(traffic$uncont_kill),sum(traffic$other_kill)),
+  total_injuries=c(sum(traffic$tra_sig_tot_inj),sum(traffic$pol_tot_inj),sum(traffic$stop_tot_inj),sum(traffic$blinker_tot_inj),
+                   sum(traffic$uncont_tot_inj),sum(traffic$other_tot_inj))
+  )
+```
+```{r}
+TRAFFIC_CONTROLS=within(TRAFFIC_CONTROLS,{
+  traffic_controls=factor(traffic_controls)
+})
+```
+```{r}
+str(TRAFFIC_CONTROLS)
+```
+```{r}
+summary(TRAFFIC_CONTROLS)
+```
+```{r}
+cor(TRAFFIC_CONTROLS$total_accidents,TRAFFIC_CONTROLS$total_kills,method= 'pearson')
+```
+```{r}
+acc_bar=plot_ly(TRAFFIC_CONTROLS,x= ~traffic_controls) %>%
+  add_trace(y= ~total_accidents,name='ACCIDENTS',type='bar') %>%
+  add_trace(y =~total_kills,name='DEATHS',type='bar') %>%
+  add_trace(y =~total_injuries,name='INJURY',type='bar')
+acc_bar
+```
+```{r}
+tc_acc_pie=plot_ly(TRAFFIC_CONTROLS,labels= ~traffic_controls,values= ~total_accidents,type = 'pie',
+                  textposition = 'inside',
+                  textinfo = 'label+percent')
+tc_acc_pie
+```
+```{r}
+tc_kill_pie=plot_ly(TRAFFIC_CONTROLS,labels= ~traffic_controls,values= ~total_kills,type = 'pie',
+                     textposition = 'inside',
+                     textinfo = 'label+percent')
+tc_kill_pie
+```
+```{r}
+tc_inj_pie=plot_ly(TRAFFIC_CONTROLS,labels= ~traffic_controls,values= ~total_injuries,type = 'pie',
+                   textposition = 'inside',
+                   textinfo = 'label+percent')
+
+tc_inj_pie
+```
